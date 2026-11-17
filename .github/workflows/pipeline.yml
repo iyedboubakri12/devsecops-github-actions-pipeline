@@ -168,9 +168,10 @@ jobs:
           REF="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
           docker load -i image.tar
           docker tag "${IMAGE_NAME}:${GITHUB_SHA}" "${REF}:${GITHUB_SHA}"
-          docker push "${REF}:${GITHUB_SHA}"
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${REF}:${GITHUB_SHA}")
-          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          docker push "${REF}:${GITHUB_SHA}" | tee push.log
+          DIGEST=$(grep -oE 'digest: sha256:[a-f0-9]{64}' push.log | cut -d' ' -f2)
+          test -n "$DIGEST"
+          echo "digest=${REF}@${DIGEST}" >> "$GITHUB_OUTPUT"
       - name: Sign the image and attach the SBOM attestation
         run: |
           cosign sign --yes "${{ steps.push.outputs.digest }}"
